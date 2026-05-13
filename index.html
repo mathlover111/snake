@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CYBER SNAKE - 霓虹貪吃蛇</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="header">
+        <h1>CYBER SNAKE</h1>
+        <div class="score-container">
+            <div>分數: <span id="score">0</span></div>
+            <div>最高: <span id="highScore">0</span></div>
+        </div>
+    </div>
+
+    <div class="canvas-container">
+        <canvas id="gameCanvas" width="400" height="400"></canvas>
+    </div>
+
+    <div class="controls">
+        <div></div>
+        <button class="btn" id="btn-up">↑</button>
+        <div></div>
+        
+        <button class="btn" id="btn-left">←</button>
+        <button class="btn" id="btn-restart">↻</button>
+        <button class="btn" id="btn-right">→</button>
+        
+        <div></div>
+        <button class="btn" id="btn-down">↓</button>
+        <div></div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
