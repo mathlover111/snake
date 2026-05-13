@@ -6,6 +6,8 @@ const tileCount = canvas.width / gridSize;
 
 let snake = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
 let food = { x: 15, y: 7 };
+// 【新增】炸彈座標陣列，方便以後如果要同時生多個炸彈
+let bombs = []; 
 let dx = 1;
 let dy = 0;
 let score = 0;
@@ -36,6 +38,7 @@ function main() {
     clearCanvas();
     drawGrid();
     drawFood();
+    drawBombs(); // 【新增】渲染炸彈
     drawSnake();
 }
 
@@ -47,7 +50,9 @@ function startGame() {
     dx = 1;
     dy = 0;
     inputQueue = [];
+    bombs = []; // 【新增】重開遊戲時清空舊炸彈
     generateFood();
+    generateBomb(); // 【新增】生成第一顆炸彈
     gameInterval = setInterval(main, gameSpeed);
 }
 
@@ -121,6 +126,43 @@ function drawFood() {
     ctx.restore();
 }
 
+// 【新增】繪製賽博風格紅光炸彈
+function drawBombs() {
+    bombs.forEach(bomb => {
+        ctx.save();
+        const x = bomb.x * gridSize;
+        const y = bomb.y * gridSize;
+
+        // 利用時間戳讓炸彈產生脈衝微光，看起來更危險
+        const pulse = 15 + Math.sin(Date.now() * 0.01) * 5;
+        ctx.shadowBlur = pulse;
+        ctx.shadowColor = '#ff3333';
+
+        // 炸彈外圍紅光
+        ctx.fillStyle = '#ff3333';
+        ctx.beginPath();
+        ctx.arc(x + 10, y + 10, 8, 0, 2 * Math.PI);
+        ctx.fill();
+
+        // 炸彈核心亮點
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(x + 10, y + 10, 3, 0, 2 * Math.PI);
+        ctx.fill();
+
+        // 炸彈引信
+        ctx.strokeStyle = '#ffb300';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x + 14, y + 6);
+        ctx.quadraticCurveTo(x + 18, y + 2, x + 16, y + 1);
+        ctx.stroke();
+
+        ctx.restore();
+    });
+}
+
 function moveSnake() {
     const head = { x: snake[0].x + dx, y: snake[0].y + dy };
     snake.unshift(head);
@@ -129,6 +171,7 @@ function moveSnake() {
         score += 10;
         document.getElementById('score').innerText = score;
         generateFood();
+        generateBomb(); // 【新增】每吃一個食物，地圖上就多長出一顆新炸彈，難度堆疊！
     } else {
         snake.pop();
     }
@@ -137,20 +180,62 @@ function moveSnake() {
 function generateFood() {
     food.x = Math.floor(Math.random() * tileCount);
     food.y = Math.floor(Math.random() * tileCount);
+    
+    // 防止食物生在蛇身上
     for (let i = 0; i < snake.length; i++) {
         if (snake[i].x === food.x && snake[i].y === food.y) {
             generateFood();
             return;
         }
     }
+    // 【新增】防止食物生在炸彈上
+    for (let i = 0; i < bombs.length; i++) {
+        if (bombs[i].x === food.x && bombs[i].y === food.y) {
+            generateFood();
+            return;
+        }
+    }
+}
+
+// 【新增】生成隨機炸彈函式
+function generateBomb() {
+    let newBomb = {
+        x: Math.floor(Math.random() * tileCount),
+        y: Math.floor(Math.random() * tileCount)
+    };
+
+    // 防止炸彈生在蛇身上
+    for (let i = 0; i < snake.length; i++) {
+        if (snake[i].x === newBomb.x && snake[i].y === newBomb.y) {
+            generateBomb();
+            return;
+        }
+    }
+    // 防止炸彈生在食物上
+    if (food.x === newBomb.x && food.y === newBomb.y) {
+        generateBomb();
+        return;
+    }
+
+    bombs.push(newBomb);
 }
 
 function checkGameOver() {
     const head = snake[0];
+    
+    // 撞牆判定
     if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) return true;
+    
+    // 撞自己判定
     for (let i = 1; i < snake.length; i++) {
         if (snake[i].x === head.x && snake[i].y === head.y) return true;
     }
+
+    // 【新增】撞炸彈判定
+    for (let i = 0; i < bombs.length; i++) {
+        if (bombs[i].x === head.x && bombs[i].y === head.y) return true;
+    }
+
     return false;
 }
 
