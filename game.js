@@ -6,8 +6,10 @@ const tileCount = canvas.width / gridSize;
 
 let snake = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
 let food = { x: 15, y: 7 };
-// 【新增】炸彈座標陣列，方便以後如果要同時生多個炸彈
-let bombs = []; 
+
+let bombs = [];       // 紅色常規炸彈（隨得分增加）
+let yellowBombs = []; // 【新增】黃色高能炸彈（固定數量）
+
 let dx = 1;
 let dy = 0;
 let score = 0;
@@ -38,7 +40,8 @@ function main() {
     clearCanvas();
     drawGrid();
     drawFood();
-    drawBombs(); // 【新增】渲染炸彈
+    drawBombs();       // 繪製紅色炸彈
+    drawYellowBombs(); // 【新增】繪製黃色炸彈
     drawSnake();
 }
 
@@ -50,9 +53,18 @@ function startGame() {
     dx = 1;
     dy = 0;
     inputQueue = [];
-    bombs = []; // 【新增】重開遊戲時清空舊炸彈
+    
+    bombs = []; 
+    yellowBombs = []; // 【新增】重置黃色炸彈
+    
     generateFood();
-    generateBomb(); // 【新增】生成第一顆炸彈
+    generateBomb(); // 生成第一顆紅炸彈
+    
+    // 【新增】開局直接生成 3 顆黃色固定炸彈
+    for (let i = 0; i < 3; i++) {
+        generateYellowBomb();
+    }
+    
     gameInterval = setInterval(main, gameSpeed);
 }
 
@@ -126,38 +138,57 @@ function drawFood() {
     ctx.restore();
 }
 
-// 【新增】繪製賽博風格紅光炸彈
+// 繪製紅色炸彈
 function drawBombs() {
     bombs.forEach(bomb => {
         ctx.save();
         const x = bomb.x * gridSize;
         const y = bomb.y * gridSize;
 
-        // 利用時間戳讓炸彈產生脈衝微光，看起來更危險
         const pulse = 15 + Math.sin(Date.now() * 0.01) * 5;
         ctx.shadowBlur = pulse;
         ctx.shadowColor = '#ff3333';
 
-        // 炸彈外圍紅光
         ctx.fillStyle = '#ff3333';
-        ctx.beginPath();
-        ctx.arc(x + 10, y + 10, 8, 0, 2 * Math.PI);
-        ctx.fill();
+        ctx.beginPath(); ctx.arc(x + 10, y + 10, 8, 0, 2 * Math.PI); ctx.fill();
 
-        // 炸彈核心亮點
         ctx.shadowBlur = 0;
         ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.arc(x + 10, y + 10, 3, 0, 2 * Math.PI);
-        ctx.fill();
+        ctx.beginPath(); ctx.arc(x + 10, y + 10, 3, 0, 2 * Math.PI); ctx.fill();
 
-        // 炸彈引信
         ctx.strokeStyle = '#ffb300';
         ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(x + 14, y + 6);
-        ctx.quadraticCurveTo(x + 18, y + 2, x + 16, y + 1);
-        ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x + 14, y + 6); ctx.quadraticCurveTo(x + 18, y + 2, x + 16, y + 1); ctx.stroke();
+
+        ctx.restore();
+    });
+}
+
+// 【新增】繪製賽博風黃色高能炸彈
+function drawYellowBombs() {
+    yellowBombs.forEach(bomb => {
+        ctx.save();
+        const x = bomb.x * gridSize;
+        const y = bomb.y * gridSize;
+
+        // 反向相位脈衝，讓黃色和紅色閃爍錯開，視覺更有動態感
+        const pulse = 15 + Math.sin(Date.now() * 0.01 + Math.PI) * 5;
+        ctx.shadowBlur = pulse;
+        ctx.shadowColor = '#ffcc00'; // 耀眼黃光
+
+        // 炸彈外圍黃光
+        ctx.fillStyle = '#ffcc00';
+        ctx.beginPath(); ctx.arc(x + 10, y + 10, 8, 0, 2 * Math.PI); ctx.fill();
+
+        // 核心亮點
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.arc(x + 10, y + 10, 3, 0, 2 * Math.PI); ctx.fill();
+
+        // 炸彈引信（電子藍色）
+        ctx.strokeStyle = '#00f0ff';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(x + 14, y + 6); ctx.quadraticCurveTo(x + 18, y + 2, x + 16, y + 1); ctx.stroke();
 
         ctx.restore();
     });
@@ -171,7 +202,7 @@ function moveSnake() {
         score += 10;
         document.getElementById('score').innerText = score;
         generateFood();
-        generateBomb(); // 【新增】每吃一個食物，地圖上就多長出一顆新炸彈，難度堆疊！
+        generateBomb(); // 每吃一個食物，多長一顆紅炸彈
     } else {
         snake.pop();
     }
@@ -181,59 +212,73 @@ function generateFood() {
     food.x = Math.floor(Math.random() * tileCount);
     food.y = Math.floor(Math.random() * tileCount);
     
-    // 防止食物生在蛇身上
     for (let i = 0; i < snake.length; i++) {
-        if (snake[i].x === food.x && snake[i].y === food.y) {
-            generateFood();
-            return;
-        }
+        if (snake[i].x === food.x && snake[i].y === food.y) { generateFood(); return; }
     }
-    // 【新增】防止食物生在炸彈上
     for (let i = 0; i < bombs.length; i++) {
-        if (bombs[i].x === food.x && bombs[i].y === food.y) {
-            generateFood();
-            return;
-        }
+        if (bombs[i].x === food.x && bombs[i].y === food.y) { generateFood(); return; }
+    }
+    // 【新增】防止食物生在黃色炸彈上
+    for (let i = 0; i < yellowBombs.length; i++) {
+        if (yellowBombs[i].x === food.x && yellowBombs[i].y === food.y) { generateFood(); return; }
     }
 }
 
-// 【新增】生成隨機炸彈函式
 function generateBomb() {
     let newBomb = {
         x: Math.floor(Math.random() * tileCount),
         y: Math.floor(Math.random() * tileCount)
     };
 
-    // 防止炸彈生在蛇身上
     for (let i = 0; i < snake.length; i++) {
-        if (snake[i].x === newBomb.x && snake[i].y === newBomb.y) {
-            generateBomb();
-            return;
-        }
+        if (snake[i].x === newBomb.x && snake[i].y === newBomb.y) { generateBomb(); return; }
     }
-    // 防止炸彈生在食物上
-    if (food.x === newBomb.x && food.y === newBomb.y) {
-        generateBomb();
-        return;
+    if (food.x === newBomb.x && food.y === newBomb.y) { generateBomb(); return; }
+    // 防止紅炸彈重疊在黃炸彈上
+    for (let i = 0; i < yellowBombs.length; i++) {
+        if (yellowBombs[i].x === newBomb.x && yellowBombs[i].y === newBomb.y) { generateBomb(); return; }
     }
 
     bombs.push(newBomb);
 }
 
+// 【新增】生成黃色炸彈函式
+function generateYellowBomb() {
+    let newBomb = {
+        x: Math.floor(Math.random() * tileCount),
+        y: Math.floor(Math.random() * tileCount)
+    };
+
+    // 嚴格的安全距離：避免開局黃色炸彈直接長在蛇頭或身體附近
+    for (let i = 0; i < snake.length; i++) {
+        const distance = Math.abs(snake[i].x - newBomb.x) + Math.abs(snake[i].y - newBomb.y);
+        if (distance < 3) { generateYellowBomb(); return; }
+    }
+    if (food.x === newBomb.x && food.y === newBomb.y) { generateYellowBomb(); return; }
+    for (let i = 0; i < bombs.length; i++) {
+        if (bombs[i].x === newBomb.x && bombs[i].y === newBomb.y) { generateYellowBomb(); return; }
+    }
+
+    yellowBombs.push(newBomb);
+}
+
 function checkGameOver() {
     const head = snake[0];
     
-    // 撞牆判定
     if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) return true;
     
-    // 撞自己判定
     for (let i = 1; i < snake.length; i++) {
         if (snake[i].x === head.x && snake[i].y === head.y) return true;
     }
 
-    // 【新增】撞炸彈判定
+    // 檢查有沒有撞到紅炸彈
     for (let i = 0; i < bombs.length; i++) {
         if (bombs[i].x === head.x && bombs[i].y === head.y) return true;
+    }
+
+    // 【新增】檢查有沒有撞到黃炸彈
+    for (let i = 0; i < yellowBombs.length; i++) {
+        if (yellowBombs[i].x === head.x && yellowBombs[i].y === head.y) return true;
     }
 
     return false;
