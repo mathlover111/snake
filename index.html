@@ -34,5 +34,15 @@
     </div>
 
     <script src="game.js"></script>
+
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('【PWA】離線引擎已成功註冊！Scope:', reg.scope))
+            .catch(err => console.log('【PWA】註冊失敗：', err));
+        });
+      }
+    </script>
 </body>
 </html>
