@@ -1,5 +1,5 @@
-const CACHE_NAME = 'cyber-snake-v1';
-// 這裡列出所有斷網時需要被死咬在硬碟裡的檔案
+// 修改版本號為 v2，並加入自動更新與 Network First 策略
+const CACHE_NAME = 'cyber-snake-v2';
 const assets = [
   './',
   './index.html',
@@ -7,17 +7,18 @@ const assets = [
   './style.css'
 ];
 
-// 1. 安裝階段：把上面指定的檔案全部下載並存進瀏覽器的 Cache 空間
+// 1. 安裝階段：強制跳過等待 (skipWaiting)，讓新 SW 立即準備接管
 self.addEventListener('install', event => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
-      console.log('【PWA】正在快取賽博蛇的所有遊戲資源...');
+      console.log('【PWA】正在快取賽博蛇 v2 最新資源...');
       return cache.addAll(assets);
     })
   );
 });
 
-// 2. 激活階段：清理舊版本的快取（當你以後更新遊戲時會用到）
+// 2. 激活階段：立即清理舊版 v1 快取，並宣告接管所有頁面
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys => {
@@ -29,16 +30,21 @@ self.addEventListener('activate', event => {
           }
         })
       );
-    })
+    }).then(() => self.clients.claim())
   );
 });
 
-// 3. 攔截請求階段：當斷網或連線時，優先從快取拿檔案，拿不到才走網路
+// 3. 攔截請求：改用 Network First 策略（有網速時抓最新，沒網速才用快取）
 self.addEventListener('fetch', event => {
   event.respondWith(
-    caches.match(event.request).then(cachedResponse => {
-      // 如果快取有檔案就直接回傳，沒有就發送網路請求
-      return cachedResponse || fetch(event.request);
-    })
+    fetch(event.request)
+      .then(response => {
+        if (response && response.status === 200) {
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseToCache));
+        }
+        return response;
+      })
+      .catch(() => caches.match(event.request))
   );
 });
